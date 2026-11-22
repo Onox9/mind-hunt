@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#060a12">
+<title>MIND HUNT — Chasse à l'homme GPS</title>
+<meta name="description" content="Chasse à l'homme urbaine géolocalisée entre amis : salons à code, tirage des rôles, pings GPS et carte en temps réel.">
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23060a12'/><circle cx='32' cy='32' r='18' fill='none' stroke='%2300f0ff' stroke-width='3'/><circle cx='32' cy='32' r='5' fill='%23a6ff00'/></svg>">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================ ACCUEIL ============================ -->
+  <section class="screen on" id="s-home">
+    <div class="brand">
+      <div class="mk">🎯</div>
+      <div><b>MIND HUNT</b><span>CHASSE À L'HOMME GPS</span></div>
+    </div>
+
+    <h1>UN GROUPE D'AMIS.<br>UN CODE. <em>UN TIRAGE.</em></h1>
+    <p class="sub">Jeu d'équipe en extérieur : les <b style="color:var(--pink)">chasseurs</b> traquent les
+      <b style="color:var(--lime)">cachés</b> grâce aux pings GPS. Les cachés doivent bouger en permanence.</p>
+
+    <label class="lbl">TON PSEUDO</label>
+    <input class="input" id="inp-pseudo" maxlength="18" placeholder="Ex : Alex" autocomplete="nickname" enterkeyhint="done">
+
+    <label class="lbl">REJOINDRE UN SALON</label>
+    <input class="input code" id="inp-code" maxlength="5" placeholder="X7K2P" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done">
+    <p class="hint" id="join-err" style="color:var(--red);min-height:15px"></p>
+    <button class="btn btn-cyan" id="btn-join">Rejoindre la partie →</button>
+
+    <div class="divider">OU</div>
+    <button class="btn btn-ghost" id="btn-create">➕ Créer un salon (hôte)</button>
+
+    <div class="card mt2">
+      <b style="color:var(--cyan)">📍 LOCALISATION</b>
+      <p class="hint" style="margin-top:6px">La localisation exacte est demandée au moment de rejoindre et de lancer la partie.
+      Elle sert à révéler la position des cachés aux chasseurs à chaque ping. Rien n'est partagé hors de la partie.</p>
+    </div>
+    <div class="card mt2">
+      <b style="color:var(--lime)">💾 TÉLÉCHARGER LES FICHIERS DU JEU</b>
+      <p class="hint" style="margin-top:6px">Le paquet complet (code du site + guides de mise en ligne GitHub/Render),
+      186 Ko, sans installation.</p>
+      <a class="btn btn-lime" style="text-decoration:none;margin-top:4px" href="/telecharger" download>⬇ Télécharger mind-hunt.zip</a>
+    </div>
+    <p class="hint" style="text-align:center;margin-top:18px;opacity:.7">v3 · temps réel · carte OpenStreetMap</p>
+  </section>
+
+  <!-- ============================ SALON ============================ -->
+  <section class="screen" id="s-lobby">
+    <div class="game-top" style="padding-left:0;padding-right:0;background:none">
+      <button class="btn btn-dark sm" id="btn-leave-lobby">← Quitter</button>
+      <span class="spacer"></span>
+      <span class="badge-gps" id="lobby-gps">📍 GPS en attente</span>
+    </div>
+
+    <div class="codebox">
+      <div class="cl">CODE DU SALON — PARTAGE-LE À TES AMIS</div>
+      <div class="cv" id="lobby-code">·····</div>
+      <button class="btn btn-dark sm" id="btn-copy" style="margin:0 auto">🔗 Copier le lien d'invitation</button>
+      <div class="stats">
+        <div class="stat"><b id="st-ping" style="color:var(--cyan)">3 min</b><span>PING GPS</span></div>
+        <div class="stat"><b id="st-dur" style="color:var(--amber)">10 min</b><span>PARTIE</span></div>
+        <div class="stat"><b id="st-roles" style="color:var(--pink)">2⚔ 4◉</b><span>RÔLES</span></div>
+      </div>
+    </div>
+
+    <div class="card mt" id="role-card">
+      <b>⚔ RÔLES — CONFIGURATION HÔTE</b>
+      <div class="chips mt" id="chips-rolemode">
+        <div class="chip on" data-v="hunters">Chasseurs fixes<small>NOMBRE DE CHASSEURS</small></div>
+        <div class="chip" data-v="total">Effectif total<small>PARTICIPANTS AU TIRAGE</small></div>
+      </div>
+
+      <div id="panel-hunters">
+        <div class="stepper mt">
+          <button data-step="hunterCount:-1">−</button>
+          <div class="val"><b class="val-hunterCount" style="color:var(--pink)">2</b><span>CHASSEURS AU TIRAGE</span></div>
+          <button data-step="hunterCount:1">+</button>
+        </div>
+      </div>
+
+      <div id="panel-total" class="hidden">
+        <div class="stepper mt">
+          <button data-step="totalParticipants:-1">−</button>
+          <div class="val"><b class="val-totalParticipants" style="color:var(--cyan)">8</b><span>PARTICIPANTS AU TIRAGE</span></div>
+          <button data-step="totalParticipants:1">+</button>
+        </div>
+        <div class="stepper mt">
+          <button data-step="hunterCount:-1">−</button>
+          <div class="val"><b class="val-hunterCount" style="color:var(--pink)">2</b><span>DONT CHASSEURS</span></div>
+          <button data-step="hunterCount:1">+</button>
+        </div>
+      </div>
+      <p class="hint" id="role-summary" style="text-align:center;font-weight:800;color:var(--cyan)"></p>
+      <p class="hint" id="host-only-hint" style="text-align:center">Seul l'hôte peut modifier les rôles.</p>
+    </div>
+
+    <div class="card mt" id="timing-card">
+      <b>⏱ RYTHME</b>
+      <label class="lbl">INTERVALLE DES PINGS GPS</label>
+      <div class="chips" id="chips-ping">
+        <div class="chip" data-v="15">15 sec<small>DÉMO</small></div>
+        <div class="chip" data-v="60">1 min<small>INTENSE</small></div>
+        <div class="chip on" data-v="180">3 min<small>CLASSIQUE</small></div>
+        <div class="chip" data-v="300">5 min<small>STRATÉGIQUE</small></div>
+      </div>
+      <label class="lbl">DURÉE DE LA PARTIE</label>
+      <div class="chips" id="chips-dur">
+        <div class="chip" data-v="300">5 min</div>
+        <div class="chip on" data-v="600">10 min</div>
+        <div class="chip" data-v="1200">20 min</div>
+        <div class="chip" data-v="1800">30 min</div>
+      </div>
+    </div>
+
+    <label class="lbl">👥 PARTICIPANTS (<span id="pcount">1</span>)</label>
+    <div class="plist" id="players"></div>
+
+    <button class="btn btn-cyan mt2" id="btn-start">▶ Lancer le tirage des rôles</button>
+    <p class="hint" id="start-hint" style="text-align:center">Le tirage est aléatoire et secret. Chaque joueur ne voit que son rôle.</p>
+  </section>
+
+  <!-- ============================ TIRAGE ============================ -->
+  <section class="screen" id="s-draw">
+    <div class="brand"><div class="mk">⚔</div><div><b>TIRAGE</b><span>ATTRIBUTION SECRÈTE</span></div></div>
+    <div style="text-align:center;padding:14px 0">
+      <h2>ATTRIBUTION SECRÈTE<br>DES RÔLES</h2>
+      <div id="draw-card" style="width:130px;height:170px;margin:26px auto;border:2px solid var(--cyan);border-radius:18px;
+        display:grid;place-items:center;font-size:56px;background:rgba(0,240,255,.06);box-shadow:0 0 50px rgba(0,240,255,.3)">?</div>
+      <div id="draw-dots" style="display:flex;gap:8px;justify-content:center;margin-bottom:16px"></div>
+      <p class="sub" id="draw-text">Le système mélange les rôles…</p>
+    </div>
+  </section>
+
+  <!-- ============================ JEU ============================ -->
+  <section class="screen" id="s-game">
+    <div class="game-top">
+      <span class="role-badge role-hunter" id="role-badge">⚔ CHASSEUR</span>
+      <span class="code" id="hud-code">CODE</span>
+      <span class="spacer"></span>
+      <span class="pill" id="hud-ping">📡 03:00</span>
+      <span class="pill" id="hud-end">⏱ 10:00</span>
+      <button class="icon-btn" id="btn-gps-again" title="Réactiver le GPS">📍</button>
+      <button class="icon-btn" id="btn-quit" title="Quitter">✕</button>
+    </div>
+
+    <div style="position:relative;flex:1;min-height:0;display:flex">
+      <div id="map"></div>
+
+      <div class="map-hud">
+        <span class="pill" id="pill-perm" style="display:none">📍 Autorisation GPS…</span>
+        <span class="pill" id="pill-role" style="display:none"></span>
+      </div>
+
+      <div class="map-fab fab-r">
+        <button class="fab-btn" id="fab-center" title="Recentrer sur moi">⌖</button>
+      </div>
+
+      <div class="map-hud" style="top:auto;bottom:calc(12px + env(safe-area-inset-bottom));pointer-events:none">
+        <button class="pill" id="btn-sheet-toggle" style="display:none;pointer-events:auto;cursor:pointer">🎯 Cibles</button>
+        <span class="spacer" style="flex:1"></span>
+        <span class="pill" id="pill-gps" style="display:none">📡</span>
+      </div>
+
+      <div class="sheet" id="sheet" style="display:none">
+        <div class="sh-head">
+          <b id="sheet-title">🎯 CIBLES DU PING</b>
+          <button class="x" id="sheet-close">✕</button>
+        </div>
+        <div id="sheet-body"></div>
+      </div>
+
+      <div class="capture-bar" id="capture-bar" style="display:none">
+        <button class="btn btn-pink" id="btn-capture">🎯 CAPTURER LA CIBLE (≤ 30 m)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ FIN ============================ -->
+  <section class="screen" id="s-end">
+    <div class="game-top" style="padding-left:0;padding-right:0;background:none">
+      <b style="font-size:11px;letter-spacing:2px;color:var(--muted)">FIN DE PARTIE</b>
+      <span class="spacer"></span>
+      <span class="badge-gps" id="end-code">—</span>
+    </div>
+    <div class="result-hero">
+      <div class="big" id="end-ico">💀</div>
+      <h1 id="end-title">DÉFAITE</h1>
+      <p class="why" id="end-why"></p>
+    </div>
+    <label class="lbl">CLASSEMENT DE LA MANCHE</label>
+    <div class="plist" id="end-players"></div>
+    <button class="btn btn-cyan mt2" id="btn-replay">🔄 Rejouer (nouveau tirage)</button>
+    <button class="btn btn-dark mt" id="btn-home">Retour à l'accueil</button>
+  </section>
+</div>
+
+<!-- ======================= MODALE GPS ======================= -->
+<div class="modal" id="modal-gps">
+  <div class="box">
+    <div class="ico">📍</div>
+    <h3>Autoriser la localisation exacte</h3>
+    <p>Mind Hunt a besoin de ta <b>position GPS exacte</b> pendant la partie :
+      elle révèle la position des <b style="color:var(--lime)">cachés</b> aux <b style="color:var(--pink)">chasseurs</b> à chaque ping
+      et sert à valider les captures sur le terrain.</p>
+    <p>Sur iPhone : choisis <b>« Autoriser pendant l'utilisation de l'app »</b> et active <b>« Position exacte »</b>.</p>
+    <p style="color:var(--amber)">Sans localisation, tu peux lancer la partie, mais tu n'apparaîtras pas sur la carte.</p>
+    <button class="btn btn-cyan" id="btn-gps-allow">📍 Autoriser ma position</button>
+    <button class="btn btn-dark mt" id="btn-gps-later">Plus tard</button>
+  </div>
+</div>
+
+<!-- ======================= MODALE INVITATION ======================= -->
+<div class="modal" id="modal-join">
+  <div class="box">
+    <div class="ico">🎯</div>
+    <h3>Rejoindre la partie <span id="join-code-lbl" style="color:var(--cyan)"></span></h3>
+    <p>Choisis ton pseudo. La localisation sera demandée juste après.</p>
+    <input class="input" id="inp-join-name" maxlength="18" placeholder="Ton pseudo">
+    <button class="btn btn-cyan mt" id="btn-join-go">Entrer dans le salon</button>
+    <button class="btn btn-dark mt" id="btn-join-cancel">Annuler</button>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div class="ping-flash" id="ping-flash"></div>
+
+<script src="/vendor/socket.io.min.js"></script>
+<script src="/vendor/leaflet.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
